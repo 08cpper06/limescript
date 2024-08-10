@@ -9,10 +9,10 @@ public:
 	utf8_char(const char* str);
 	~utf8_char();
 
-	utf8_char(const utf8_char&) = default;
-	utf8_char& operator=(const utf8_char&) = default;
-	utf8_char(utf8_char&&) = default;
-	utf8_char& operator=(utf8_char&&) = default;
+	utf8_char(const utf8_char& rhs);
+	utf8_char& operator=(const utf8_char& rhs);
+	utf8_char(utf8_char&& rhs) = delete;
+	utf8_char& operator=(utf8_char&& rhs) = delete;
 
 	int char_size() const;
 	const char* data() const;

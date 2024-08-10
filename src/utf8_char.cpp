@@ -1,5 +1,6 @@
 #include "utf8_char.hpp"
 #include <cstring>
+#include <utility>
 
 
 /* ==========================================
@@ -34,6 +35,20 @@ utf8_char::utf8_char(const char* str) :
 }
 
 utf8_char::~utf8_char() {}
+
+utf8_char::utf8_char(const utf8_char& rhs) :
+	_data({ rhs._data[0],rhs._data[1],rhs._data[2],rhs._data[3],rhs._data[4]}),
+	_csize(rhs._csize)
+{}
+utf8_char& utf8_char::operator=(const utf8_char& rhs) {
+	_csize = rhs._csize;
+	char* p = const_cast<char*>(_data);
+	char* pp = const_cast<char*>(rhs._data);
+	for (int index = 0; index < 5; ++index) {
+		*p++ = *pp++;
+	}
+	return *this;
+}
 
 int utf8_char::char_size() const { return _csize; }
 const char* utf8_char::data() const { return _data; }
