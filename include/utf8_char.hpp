@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 
 class utf8_char_view;
@@ -67,3 +68,6 @@ private:
 };
 
 utf8_char_view next(char** p);
+
+std::string operator+(const std::string& lhs, const utf8_char& rhs);
+std::string operator+(const utf8_char& lhs, const std::string& rhs);

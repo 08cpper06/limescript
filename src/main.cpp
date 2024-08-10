@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include "utf8_char.hpp"
+#include "tokenize.hpp"
 
 
 int main(int argc, const char** argv) {
@@ -17,17 +18,10 @@ int main(int argc, const char** argv) {
 	std::string source((std::istreambuf_iterator<char>(in)), (std::istreambuf_iterator<char>()));
 	source.push_back('\0');
 
-	char* p = source.data();
-	utf8_char_view ch;
-	do {
-		ch = next(&p);
-		if (ch.char_size() < 0) {
-			break;
-		}
-		std::cout << utf8_char(ch).data();
-	} while (ch != "");
-
-	std::cout << std::endl;
+	std::vector<token> tokens = lexer::tokenize(source);
+	for (const token& tok : tokens) {
+		std::cout << tok.str << std::endl;
+	}
 
 	return 0;
 } 

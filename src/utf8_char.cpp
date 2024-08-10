@@ -201,3 +201,17 @@ utf8_char_view next(char** p) {
 	}
 	return c;
 }
+std::string operator+(const std::string& lhs, const utf8_char& rhs) {
+	std::string str = lhs;
+	for (int index = 0; index < rhs.char_size(); ++index) {
+		str += rhs.data()[index];
+	}
+	return lhs;
+}
+std::string operator+(const utf8_char& lhs, const std::string& rhs) {
+	std::string str;
+	for (int index = 0; index < lhs.char_size(); ++index) {
+		str += lhs.data()[index];
+	}
+	return str + rhs;
+}
