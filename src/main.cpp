@@ -21,6 +21,9 @@ int main(int argc, const char** argv) {
 	utf8_char_view ch;
 	do {
 		ch = next(&p);
+		if (ch.char_size() < 0) {
+			break;
+		}
 		std::cout << utf8_char(ch).data();
 	} while (ch != "");
 

@@ -196,6 +196,8 @@ bool utf8_char_view::operator<=(const utf8_char_view rhs) const {
 
 utf8_char_view next(char** p) {
 	utf8_char_view c(*p);
-	*p += c.char_size();
+	if (c.char_size() > 0) {
+		*p += c.char_size();
+	}
 	return c;
 }
