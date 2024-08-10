@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include <string> 
+#include <string>
+#include "utf8_char.hpp"
 
 
 int main(int argc, const char** argv) {
@@ -16,7 +17,14 @@ int main(int argc, const char** argv) {
 	std::string source((std::istreambuf_iterator<char>(in)), (std::istreambuf_iterator<char>()));
 	source.push_back('\0');
 
-	std::cout << source << std::endl;
+	char* p = source.data();
+	utf8_char_view ch;
+	do {
+		ch = next(&p);
+		std::cout << utf8_char(ch).data();
+	} while (ch != "");
+
+	std::cout << std::endl;
 
 	return 0;
-}
+} 

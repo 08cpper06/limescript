@@ -65,3 +65,5 @@ private:
 	const char* _ptr;
 	int _csize;
 };
+
+utf8_char_view next(char** p);

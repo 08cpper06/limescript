@@ -8,23 +8,23 @@
  * ==========================================
  */
 utf8_char::utf8_char() :
-	_data({ 0, 0, 0, 0, 0}),
+	_data(),
 	_csize(1)
 {}
 
 utf8_char::utf8_char(const char* str) :
-	_data({ 0, 0, 0, 0, 0})
+	_data()
 {
 	_csize = -1;
 	if (*str < 128) { _csize = 1; }
-	if (*str >= 0b11110000) { _csize = 4; }
-	if (*str >= 0b11100000) { _csize = 3; }
-	if (*str >= 0b11000000) { _csize = 2; }
+	else if (*str >= 0b11110000) { _csize = 4; }
+	else if (*str >= 0b11100000) { _csize = 3; }
+	else if (*str >= 0b11000000) { _csize = 2; }
 
 	int index = 0;
 	char* p = const_cast<char*>(_data);
-	while (*str && index < _csize) {
-		p[index++] = *str++;
+	for (;*str && index < _csize; ++index) {
+		*p++ = *str++;
 	}
 	if (index != _csize) {
 		_csize = -1;
@@ -37,9 +37,15 @@ utf8_char::utf8_char(const char* str) :
 utf8_char::~utf8_char() {}
 
 utf8_char::utf8_char(const utf8_char& rhs) :
-	_data({ rhs._data[0],rhs._data[1],rhs._data[2],rhs._data[3],rhs._data[4]}),
+	_data(),
 	_csize(rhs._csize)
-{}
+{
+	char* p = const_cast<char*>(_data);
+	char* pp = const_cast<char*>(rhs._data);
+	for (int index = 0; index < 5; ++index) {
+		*p++ = *pp++;
+	}
+}
 utf8_char& utf8_char::operator=(const utf8_char& rhs) {
 	_csize = rhs._csize;
 	char* p = const_cast<char*>(_data);
@@ -72,9 +78,9 @@ bool utf8_char::operator>(const utf8_char& rhs) const {
 		return false;
 	}
 	if (_csize == 4) { return _data[4] > rhs._data[4]; }
-	if (_csize == 3) { return _data[3] > rhs._data[3]; }
-	if (_csize == 2) { return _data[2] > rhs._data[2]; }
-	if (_csize == 1) { return _data[1] > rhs._data[1]; }
+	else if (_csize == 3) { return _data[3] > rhs._data[3]; }
+	else if (_csize == 2) { return _data[2] > rhs._data[2]; }
+	else if (_csize == 1) { return _data[1] > rhs._data[1]; }
 	return false;
 }
 bool utf8_char::operator<(const utf8_char& rhs) const {
@@ -106,9 +112,9 @@ bool utf8_char::operator>(const utf8_char_view rhs) const {
 		return false;
 	}
 	if (_csize == 4) { return _data[4] > rhs._ptr[4]; }
-	if (_csize == 3) { return _data[3] > rhs._ptr[3]; }
-	if (_csize == 2) { return _data[2] > rhs._ptr[2]; }
-	if (_csize == 1) { return _data[1] > rhs._ptr[1]; }
+	else if (_csize == 3) { return _data[3] > rhs._ptr[3]; }
+	else if (_csize == 2) { return _data[2] > rhs._ptr[2]; }
+	else if (_csize == 1) { return _data[1] > rhs._ptr[1]; }
 	return false;
 }
 bool utf8_char::operator<(const utf8_char_view rhs) const {
@@ -135,9 +141,9 @@ utf8_char_view::utf8_char_view(const char* ptr) :
 {
 	_csize = -1;
 	if (*ptr < 128) { _csize = 1; }
-	if (*ptr >= 0b11110000) { _csize = 4; }
-	if (*ptr >= 0b11100000) { _csize = 3; }
-	if (*ptr >= 0b11000000) { _csize = 2; }
+	else if (*ptr >= 0b11110000) { _csize = 4; }
+	else if (*ptr >= 0b11100000) { _csize = 3; }
+	else if (*ptr >= 0b11000000) { _csize = 2; }
 }
 utf8_char_view::~utf8_char_view() {}
 
@@ -167,7 +173,14 @@ bool utf8_char_view::operator!=(const utf8_char_view rhs) const {
 	return !(*this == rhs);
 }
 bool utf8_char_view::operator>(const utf8_char_view rhs) const {
-	;
+	if (_csize != -1 || rhs.char_size()) {
+		return false;
+	}
+	if (_csize == 4) { return _ptr[4] > rhs._ptr[4]; }
+	else if (_csize == 3) { return _ptr[3] > rhs._ptr[3]; }
+	else if (_csize == 2) { return _ptr[2] > rhs._ptr[2]; }
+	else if (_csize == 1) { return _ptr[1] > rhs._ptr[1]; }
+	return false;
 }
 bool utf8_char_view::operator<(const utf8_char_view rhs) const {
 	return !(*this > rhs) && !(*this == rhs);
@@ -177,4 +190,12 @@ bool utf8_char_view::operator>=(const utf8_char_view rhs) const {
 }
 bool utf8_char_view::operator<=(const utf8_char_view rhs) const {
 	return (*this < rhs) || *this == rhs;
+}
+
+
+
+utf8_char_view next(char** p) {
+	utf8_char_view c(*p);
+	*p += c.char_size();
+	return c;
 }
