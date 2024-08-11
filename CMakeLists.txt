@@ -13,6 +13,7 @@ add_executable(${PROJECT_NAME}
 	./src/utf8_char.cpp
 	./src/tokenize.cpp
 	./src/parser.cpp
+	./src/asm.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
