@@ -3,6 +3,7 @@
 #include <string>
 #include "utf8_char.hpp"
 #include "tokenize.hpp"
+#include "parser.hpp"
 
 
 int main(int argc, const char** argv) {
@@ -19,8 +20,9 @@ int main(int argc, const char** argv) {
 	source.push_back('\0');
 
 	std::vector<token> tokens = lexer::tokenize(source);
-	for (const token& tok : tokens) {
-		std::cout << tok.str << std::endl;
+	std::unique_ptr<ast_base_node> node = parser::parse(tokens);
+	if (node) {
+		std::cout << node->log("") << std::endl;
 	}
 
 	return 0;
