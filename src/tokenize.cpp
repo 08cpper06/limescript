@@ -36,7 +36,9 @@ std::optional<token> lexer::try_parse_number(context& con) {
 std::optional<token> lexer::try_parse_sign(context& con) {
 	static std::vector<std::string> sign_list = {
 		"+",
-		"-"
+		"-",
+		"*",
+		"/"
 	};
 
 	auto start_with = [](char* p, const char* keyword) {

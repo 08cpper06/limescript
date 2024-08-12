@@ -18,7 +18,7 @@ void ast_value_node::encode(asm_context& con) const {
 	con.codes.push_back(std::move(inst));
 }
 
-std::string ast_add_sub_node::log(const std::string& prefix) const {
+std::string ast_bin_op_node::log(const std::string& prefix) const {
 	std::string str = prefix + "<operator op=\"" + op.str + ">\n";
 	if (lhs) {
 		str += lhs->log("\t");
@@ -28,7 +28,7 @@ std::string ast_add_sub_node::log(const std::string& prefix) const {
 	}
 	return str + prefix + "</operator>\n";
 }
-void ast_add_sub_node::encode(asm_context& con) const {
+void ast_bin_op_node::encode(asm_context& con) const {
 	if (lhs) {
 		lhs->encode(con);
 	}
@@ -39,6 +39,10 @@ void ast_add_sub_node::encode(asm_context& con) const {
 		con.codes.push_back(std::make_unique<add_instruct>());
 	} else if (op.str == "-") {
 		con.codes.push_back(std::make_unique<sub_instruct>());
+	} else if (op.str == "*") {
+		con.codes.push_back(std::make_unique<mul_instruct>());
+	} else if (op.str == "/") {
+		con.codes.push_back(std::make_unique<div_instruct>());
 	}
 }
 
@@ -50,15 +54,32 @@ std::unique_ptr<ast_base_node> parser::try_parse_value(context& con) {
 	node->value = *con.itr++;
 	return std::move(node);
 }
-std::unique_ptr<ast_base_node> parser::try_parse_add_sub(context& con) {
+std::unique_ptr<ast_base_node> parser::try_parse_mul_div(context& con) {
 	std::unique_ptr<ast_base_node> lhs = try_parse_value(con);
 
 	while (lhs) {
-		if (con.itr->str == "+" || con.itr->str == "-") {
-			std::unique_ptr<ast_add_sub_node> node = std::make_unique<ast_add_sub_node>();
+		if (con.itr->str == "*" || con.itr->str == "/") {
+			std::unique_ptr<ast_bin_op_node> node = std::make_unique<ast_bin_op_node>();
 			node->op = *con.itr++;
 			node->lhs = std::move(lhs);
 			node->rhs = try_parse_value(con);
+			lhs = std::move(node);
+		}
+		else {
+			return lhs;
+		}
+	}
+	return nullptr;
+}
+std::unique_ptr<ast_base_node> parser::try_parse_add_sub(context& con) {
+	std::unique_ptr<ast_base_node> lhs = try_parse_mul_div(con);
+
+	while (lhs) {
+		if (con.itr->str == "+" || con.itr->str == "-") {
+			std::unique_ptr<ast_bin_op_node> node = std::make_unique<ast_bin_op_node>();
+			node->op = *con.itr++;
+			node->lhs = std::move(lhs);
+			node->rhs = try_parse_mul_div(con);
 			lhs = std::move(node);
 		} else {
 			return lhs;

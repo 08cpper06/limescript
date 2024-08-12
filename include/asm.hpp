@@ -53,3 +53,17 @@ public:
 	void execute(asm_context& con) const override;
 	std::string log(const std::string& prefix) const override;
 };
+
+class mul_instruct : public instruct {
+public:
+	~mul_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+};
+
+class div_instruct : public instruct {
+public:
+	~div_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+};

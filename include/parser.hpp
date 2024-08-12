@@ -31,9 +31,9 @@ public:
 	token value;
 };
 
-class ast_add_sub_node : public ast_base_node {
+class ast_bin_op_node : public ast_base_node {
 public:
-	~ast_add_sub_node() = default;
+	~ast_bin_op_node() = default;
 	std::string log(const std::string& prefix) const override;
 	void encode(asm_context& con) const override;
 
@@ -50,6 +50,7 @@ private:
 	};
 private:
 	static std::unique_ptr<ast_base_node> try_parse_value(context& con);
+	static std::unique_ptr<ast_base_node> try_parse_mul_div(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_add_sub(context& con);
 public:
 	static std::unique_ptr<ast_base_node> parse(const std::vector<token>& tokens);
