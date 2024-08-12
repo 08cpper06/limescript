@@ -52,20 +52,19 @@ std::unique_ptr<ast_base_node> parser::try_parse_value(context& con) {
 }
 std::unique_ptr<ast_base_node> parser::try_parse_add_sub(context& con) {
 	std::unique_ptr<ast_base_node> lhs = try_parse_value(con);
-	if (con.itr->type != token_type::sign ||
-		(con.itr->str != "+" && con.itr->str != "-")) {
-		return lhs;
+
+	while (lhs) {
+		if (con.itr->str == "+" || con.itr->str == "-") {
+			std::unique_ptr<ast_add_sub_node> node = std::make_unique<ast_add_sub_node>();
+			node->op = *con.itr++;
+			node->lhs = std::move(lhs);
+			node->rhs = try_parse_value(con);
+			lhs = std::move(node);
+		} else {
+			return lhs;
+		}
 	}
-	std::unique_ptr<ast_add_sub_node> node = std::make_unique<ast_add_sub_node>();
-	node->lhs = std::move(lhs);
-	node->op = *con.itr++;
-	node->rhs = try_parse_add_sub(con);
-	if (!(node->rhs)) {
-		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
-		error->message = "not found rhs";
-		node->rhs = std::move(error);
-	}
-	return std::move(node);
+	return nullptr;
 }
 std::unique_ptr<ast_base_node> parser::parse(const std::vector<token>& tokens) {
 	context con { .itr = tokens.begin() };
