@@ -31,6 +31,16 @@ public:
 	token value;
 };
 
+class ast_parenthess_node : public ast_base_node {
+public:
+	~ast_parenthess_node() = default;
+	std::string log(const std::string& prefix) const override;
+	void encode(asm_context& con) const override;
+
+public:
+	std::unique_ptr<ast_base_node> expr;
+};
+
 class ast_bin_op_node : public ast_base_node {
 public:
 	~ast_bin_op_node() = default;
@@ -49,6 +59,7 @@ private:
 		std::vector<token>::const_iterator itr;
 	};
 private:
+	static std::unique_ptr<ast_base_node> try_parse_parenthess(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_value(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_mul_div(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_add_sub(context& con);

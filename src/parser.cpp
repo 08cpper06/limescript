@@ -18,6 +18,19 @@ void ast_value_node::encode(asm_context& con) const {
 	con.codes.push_back(std::move(inst));
 }
 
+std::string ast_parenthess_node::log(const std::string& prefix) const {
+	std::string str = prefix + "<parenthess>\n";
+	if (expr) {
+		str += expr->log("\t");
+	}
+	return str + prefix + "</parenthess>\n";
+}
+void ast_parenthess_node::encode(asm_context& con) const {
+	if (expr) {
+		expr->encode(con);
+	}
+}
+
 std::string ast_bin_op_node::log(const std::string& prefix) const {
 	std::string str = prefix + "<operator op=\"" + op.str + ">\n";
 	if (lhs) {
@@ -46,7 +59,36 @@ void ast_bin_op_node::encode(asm_context& con) const {
 	}
 }
 
+std::unique_ptr<ast_base_node> parser::try_parse_parenthess(context& con) {
+	if (con.itr->str != "(") {
+		return nullptr;
+	}
+	++con.itr;
+
+	std::unique_ptr<ast_base_node> expr = parser::try_parse_add_sub(con);
+	if (!expr) {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "empty parenthess";
+		++con.itr;
+		return error;
+	}
+	if (con.itr->str != ")") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "not found `)`";
+		++con.itr;
+		return error;
+	}
+	++con.itr;
+	std::unique_ptr<ast_parenthess_node> node = std::make_unique<ast_parenthess_node>();
+	node->expr = std::move(expr);
+	return std::move(node);
+}
 std::unique_ptr<ast_base_node> parser::try_parse_value(context& con) {
+	std::unique_ptr<ast_base_node> expr = parser::try_parse_parenthess(con);
+	if (expr) {
+		return std::move(expr);
+	}
+
 	if (con.itr->type != token_type::number) {
 		return nullptr;
 	}
