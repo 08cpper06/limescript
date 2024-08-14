@@ -29,6 +29,7 @@ void add_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<int>(lhs.value) + std::get<int>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -42,6 +43,7 @@ void sub_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<int>(lhs.value) - std::get<int>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -55,6 +57,7 @@ void mul_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<int>(lhs.value) * std::get<int>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -68,6 +71,7 @@ void div_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<int>(lhs.value) / std::get<int>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -81,6 +85,7 @@ void addf_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<double>(lhs.value) + std::get<double>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -94,6 +99,7 @@ void subf_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<double>(lhs.value) - std::get<double>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -107,6 +113,7 @@ void mulf_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<double>(lhs.value) * std::get<double>(rhs.value);
 
 	con.stack.push_back(std::move(result));
@@ -120,6 +127,7 @@ void divf_instruct::execute(asm_context& con) const {
 	operand lhs = con.stack.back(); con.stack.pop_back();
 
 	operand result;
+	result.type = operand_type::immidiate;
 	result.value = std::get<double>(lhs.value) / std::get<double>(rhs.value);
 
 	con.stack.push_back(std::move(result));
