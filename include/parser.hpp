@@ -2,6 +2,7 @@
 #include <memory>
 #include "tokenize.hpp"
 #include "asm.hpp"
+#include "types.hpp"
 
 
 class ast_base_node {
@@ -9,6 +10,7 @@ public:
 	virtual ~ast_base_node() = default;
 	virtual std::string log(const std::string& prefix) const = 0;
 	virtual void encode(asm_context& con) const = 0;
+	virtual object_type type() const = 0;
 };
 
 class ast_error_node : public ast_base_node {
@@ -16,6 +18,7 @@ public:
 	~ast_error_node() = default;
 	std::string log(const std::string& prefix) const override;
 	void encode(asm_context& con) const override;
+	object_type type() const override;
 
 public:
 	std::string message;
@@ -26,6 +29,7 @@ public:
 	~ast_value_node() = default;
 	std::string log(const std::string& prefix) const override;
 	void encode(asm_context& con) const override;
+	object_type type() const override;
 
 public:
 	token value;
@@ -36,6 +40,7 @@ public:
 	~ast_parenthess_node() = default;
 	std::string log(const std::string& prefix) const override;
 	void encode(asm_context& con) const override;
+	object_type type() const override;
 
 public:
 	std::unique_ptr<ast_base_node> expr;
@@ -46,6 +51,7 @@ public:
 	~ast_bin_op_node() = default;
 	std::string log(const std::string& prefix) const override;
 	void encode(asm_context& con) const override;
+	object_type type() const override;
 
 public:
 	token op;

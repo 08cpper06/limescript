@@ -22,7 +22,39 @@ std::optional<token> lexer::try_parse_number(context& con) {
 		str += *p++;
 	}
 	if (str.empty()) {
-		return std::nullopt;
+		if (*p != '.') {
+			return std::nullopt;
+		}
+		str += *p++;
+		if (*p < '0' || *p > '9') {
+			return std::nullopt;
+		}
+		while (*p >= '0' && *p <= '9') {
+			str += *p++;
+		}
+		token tok{
+			.str = str,
+			.type = token_type::floating,
+			.point = con.point
+		};
+		con.point.col += p - con.p;
+		con.p = p;
+		return tok;
+	}
+
+	if (*p == '.') {
+		str += *p++;
+		while (*p >= '0' && *p <= '9') {
+			str += *p++;
+		}
+		token tok{
+			.str = str,
+			.type = token_type::floating,
+			.point = con.point
+		};
+		con.point.col += p - con.p;
+		con.p = p;
+		return tok;
 	}
 	token tok = {
 		.str = str,

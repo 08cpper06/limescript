@@ -14,6 +14,7 @@ add_executable(${PROJECT_NAME}
 	./src/tokenize.cpp
 	./src/parser.cpp
 	./src/asm.cpp
+	./src/types.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)

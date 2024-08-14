@@ -13,6 +13,7 @@ struct code_point {
 enum class token_type {
 	unknown,
 	number,
+	floating,
 	sign,
 	eof,
 };

@@ -5,17 +5,39 @@ std::string ast_error_node::log(const std::string& prefix) const {
 	return prefix + "<error>" + message + "</error>\n";
 }
 void ast_error_node::encode(asm_context& con) const {}
+object_type ast_error_node::type() const { return object_type::none; }
 
 std::string ast_value_node::log(const std::string& prefix) const {
 	return prefix + "<value>" + value.str + "</value>\n";
 }
 void ast_value_node::encode(asm_context& con) const {
 	std::unique_ptr<push_instruct> inst = std::make_unique<push_instruct>();
+	OBJECT object;
+	switch (type()) {
+	case object_type::integer:
+		object = std::atoi(value.str.c_str()); 
+		break;
+	case object_type::floating:
+		object = std::atof(value.str.c_str()); 
+		break;
+	default:
+		object = invalid_type();
+		break;
+	}
 	inst->value = operand {
 						.type = operand_type::immidiate,
-						.value = std::atoi(value.str.c_str())
+						.value = object
 					};
 	con.codes.push_back(std::move(inst));
+}
+object_type ast_value_node::type() const {
+	if (value.type == token_type::number) {
+		return object_type::integer;
+	}
+	if (value.type == token_type::floating) {
+		return object_type::floating;
+	}
+	return object_type::none;
 }
 
 std::string ast_parenthess_node::log(const std::string& prefix) const {
@@ -29,6 +51,9 @@ void ast_parenthess_node::encode(asm_context& con) const {
 	if (expr) {
 		expr->encode(con);
 	}
+}
+object_type ast_parenthess_node::type() const {
+	return expr ? expr->type() : object_type::none;
 }
 
 std::string ast_bin_op_node::log(const std::string& prefix) const {
@@ -44,19 +69,43 @@ std::string ast_bin_op_node::log(const std::string& prefix) const {
 void ast_bin_op_node::encode(asm_context& con) const {
 	if (lhs) {
 		lhs->encode(con);
+		if (lhs->type() != type()) {
+			con.codes.push_back(std::make_unique<cast_instruct>(type()));
+		}
 	}
 	if (rhs) {
 		rhs->encode(con);
+		if (rhs->type() != type()) {
+			con.codes.push_back(std::make_unique<cast_instruct>(type()));
+		}
 	}
-	if (op.str == "+") {
-		con.codes.push_back(std::make_unique<add_instruct>());
-	} else if (op.str == "-") {
-		con.codes.push_back(std::make_unique<sub_instruct>());
-	} else if (op.str == "*") {
-		con.codes.push_back(std::make_unique<mul_instruct>());
-	} else if (op.str == "/") {
-		con.codes.push_back(std::make_unique<div_instruct>());
+
+	if (type() == object_type::integer) {
+		if (op.str == "+") {
+			con.codes.push_back(std::make_unique<add_instruct>());
+		} else if (op.str == "-") {
+			con.codes.push_back(std::make_unique<sub_instruct>());
+		} else if (op.str == "*") {
+			con.codes.push_back(std::make_unique<mul_instruct>());
+		} else if (op.str == "/") {
+			con.codes.push_back(std::make_unique<div_instruct>());
+		}
+	} else if (type() == object_type::floating) {
+		if (op.str == "+") {
+			con.codes.push_back(std::make_unique<addf_instruct>());
+		} else if (op.str == "-") {
+			con.codes.push_back(std::make_unique<subf_instruct>());
+		} else if (op.str == "*") {
+			con.codes.push_back(std::make_unique<mulf_instruct>());
+		} else if (op.str == "/") {
+			con.codes.push_back(std::make_unique<divf_instruct>());
+		}
 	}
+}
+object_type ast_bin_op_node::type() const {
+	object_type lhs_type = lhs ? lhs->type() : object_type::none;
+	object_type rhs_type = rhs ? rhs->type() : object_type::none;
+	return evaluate_type(lhs_type, rhs_type);
 }
 
 std::unique_ptr<ast_base_node> parser::try_parse_parenthess(context& con) {
@@ -89,7 +138,8 @@ std::unique_ptr<ast_base_node> parser::try_parse_value(context& con) {
 		return std::move(expr);
 	}
 
-	if (con.itr->type != token_type::number) {
+	if (con.itr->type != token_type::number &&
+		con.itr->type != token_type::floating) {
 		return nullptr;
 	}
 	std::unique_ptr<ast_value_node> node = std::make_unique<ast_value_node>();

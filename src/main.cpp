@@ -35,7 +35,18 @@ int main(int argc, const char** argv) {
 	}
 
 	std::cout << "--------------" << std::endl;
-	std::cout << std::get<int>(con.stack.back().value) << std::endl;
+	struct print {
+		void operator()(const int& value) {
+			std::cout << value << std::endl;
+		}
+		void operator()(const double& value) {
+			std::cout << value << std::endl;
+		}
+		void operator()(...) {
+			std::cout << "invalid type" << std::endl;
+		}
+	};
+	std::visit(print{}, con.stack.back().value);
 
 	return 0;
 } 
