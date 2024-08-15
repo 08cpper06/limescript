@@ -26,12 +26,19 @@ int main(int argc, const char** argv) {
 		std::cout << "failed to build AST" << std::endl;
 		return 3;
 	}
+	std::cout << node->log("") << std::endl;
+	std::cout << "===========" << std::endl;
 
 	asm_context con;
 	node->encode(con);
 	for (const std::unique_ptr<instruct>& inst : con.codes) {
 		std::cout << inst->log("") << std::endl;
+	}
+	for (const std::unique_ptr<instruct>& inst : con.codes) {
 		inst->execute(con);
+		if (con.is_abort) {
+			break;
+		}
 	}
 
 	std::cout << "--------------" << std::endl;
@@ -46,7 +53,9 @@ int main(int argc, const char** argv) {
 			std::cout << "invalid type" << std::endl;
 		}
 	};
-	std::visit(print{}, con.stack.back().value);
+	if (!con.stack.empty()) {
+		std::visit(print{}, con.stack.back().value);
+	}
 
 	return 0;
 } 

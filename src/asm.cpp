@@ -17,6 +17,20 @@ std::string push_instruct::log(const std::string& prefix) const {
 	return prefix + "push none";
 }
 
+void pop_instruct::execute(asm_context& con) const {
+	con.stack.pop_back();
+}
+std::string pop_instruct::log(const std::string& prefix) const {
+	return prefix + "pop";
+}
+
+void return_instruct::execute(asm_context& con) const {
+	con.is_abort = true;
+}
+std::string return_instruct::log(const std::string& prefix) const {
+	return prefix + "return";
+}
+
 void abort_instruct::execute(asm_context& con) const {
 	con.is_abort = true;
 }

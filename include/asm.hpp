@@ -48,6 +48,21 @@ public:
 public:
 	operand value;
 };
+
+class pop_instruct : public instruct {
+public:
+	~pop_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+};
+
+class return_instruct : public instruct {
+public:
+	~return_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+};
+
 class abort_instruct : public instruct {
 public:
 	~abort_instruct() = default;

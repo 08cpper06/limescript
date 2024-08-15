@@ -51,7 +51,7 @@ ast_base_node* ast_value_node::static_class() const {
 std::string ast_parenthess_node::log(const std::string& prefix) const {
 	std::string str = prefix + "<parenthess>\n";
 	if (expr) {
-		str += expr->log("\t");
+		str += expr->log(prefix + "\t");
 	}
 	return str + prefix + "</parenthess>\n";
 }
@@ -71,10 +71,10 @@ ast_base_node* ast_parenthess_node::static_class() const {
 std::string ast_bin_op_node::log(const std::string& prefix) const {
 	std::string str = prefix + "<operator op=\"" + op.str + ">\n";
 	if (lhs) {
-		str += lhs->log("\t");
+		str += lhs->log(prefix + "\t");
 	}
 	if (rhs) {
-		str += rhs->log("\t");
+		str += rhs->log(prefix + "\t");
 	}
 	return str + prefix + "</operator>\n";
 }
@@ -124,12 +124,53 @@ ast_base_node* ast_bin_op_node::static_class() const {
 	return &instance;
 }
 
+std::string ast_expr_node::log(const std::string& prefix) const {
+	if (expr) {
+		return expr->log(prefix);
+	}
+	return "";
+}
+void ast_expr_node::encode(asm_context& con) const {
+	if (expr) {
+		expr->encode(con);
+	}
+	con.codes.push_back(std::make_unique<pop_instruct>());
+}
+object_type ast_expr_node::type() const {
+	return expr ? expr->type() : object_type::none;
+}
+ast_base_node* ast_expr_node::static_class() const {
+	static ast_expr_node instance;
+	return &instance;
+}
+
+std::string ast_return_node::log(const std::string& prefix) const {
+	std::string str = prefix + "<return>\n";
+	if (expr) {
+		str += expr->log(prefix + "\t");
+	}
+	return str + prefix + "</return>\n";
+}
+void ast_return_node::encode(asm_context& con) const {
+	if (expr) {
+		expr->encode(con);
+	}
+	con.codes.push_back(std::make_unique<return_instruct>());
+}
+object_type ast_return_node::type() const {
+	return expr ? expr->type() : object_type::none;
+}
+ast_base_node* ast_return_node::static_class() const {
+	static ast_return_node instance;
+	return &instance;
+}
+
 std::string ast_block_node::log(const std::string& prefix) const {
 	std::string str = prefix + "<block name=\"" + block_name + "\">\n";
 	for (const std::unique_ptr<ast_base_node>& node : nodes) {
 		str += node->log(prefix + "\t");
 	}
-	return prefix + "</block>\n";
+	return str + prefix + "</block>\n";
 }
 void ast_block_node::encode(asm_context& con) const {
 	for (const std::unique_ptr<ast_base_node>& node : nodes) {
@@ -215,6 +256,22 @@ std::unique_ptr<ast_base_node> parser::try_parse_add_sub(context& con) {
 	}
 	return nullptr;
 }
+std::unique_ptr<ast_base_node> parser::try_parse_return(context& con) {
+	if (con.itr->type != token_type::_return) {
+		return nullptr;
+	}
+	++con.itr;
+	std::unique_ptr<ast_base_node> expr = try_parse_add_sub(con);
+	if (con.itr->str != ";") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "not found semicolon";
+		return std::move(error);
+	}
+	++con.itr;
+	std::unique_ptr<ast_return_node> node = std::make_unique<ast_return_node>();
+	node->expr = std::move(expr);
+	return std::move(node);
+}
 std::unique_ptr<ast_base_node> parser::try_parse_stmt(context& con) {
 	if (con.itr->str == ";") {
 		++con.itr;
@@ -222,18 +279,24 @@ std::unique_ptr<ast_base_node> parser::try_parse_stmt(context& con) {
 	}
 	std::unique_ptr<ast_base_node> node;
 
+	node = parser::try_parse_return(con);
+	if (node) {
+		return std::move(node);
+	}
+
 	node = parser::try_parse_add_sub(con);
 	if (node && node->static_class() == ast_error_node().static_class()) {
 		return std::move(node);
 	}
-	if (con.itr->str != ";" ||
-		con.itr->type == token_type::eof) {
+	if (con.itr->str != ";") {
 		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
 		error->message = "not found semicolon";
 		return std::move(error);
 	}
 	++con.itr;
-	return std::move(node);
+	std::unique_ptr<ast_expr_node> expr = std::make_unique<ast_expr_node>();
+	expr->expr = std::move(node);
+	return std::move(expr);
 }
 std::unique_ptr<ast_base_node> parser::parse(const std::vector<token>& tokens) {
 	context con { .itr = tokens.begin() };

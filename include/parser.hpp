@@ -64,6 +64,30 @@ public:
 	std::unique_ptr<ast_base_node> rhs;
 };
 
+class ast_expr_node : public ast_base_node {
+public:
+	~ast_expr_node() = default;
+	std::string log(const std::string& prefix) const override;
+	void encode(asm_context& con) const override;
+	object_type type() const override;
+	ast_base_node* static_class() const override;
+
+public:
+	std::unique_ptr<ast_base_node> expr;
+};
+
+class ast_return_node : public ast_base_node {
+public:
+	~ast_return_node() = default;
+	std::string log(const std::string& prefix) const override;
+	void encode(asm_context& con) const override;
+	object_type type() const override;
+	ast_base_node* static_class() const override;
+
+public:
+	std::unique_ptr<ast_base_node> expr;
+};
+
 class ast_block_node : public ast_base_node {
 public:
 	~ast_block_node() = default;
@@ -87,6 +111,7 @@ private:
 	static std::unique_ptr<ast_base_node> try_parse_value(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_mul_div(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_add_sub(context& con);
+	static std::unique_ptr<ast_base_node> try_parse_return(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_stmt(context& con);
 public:
 	static std::unique_ptr<ast_base_node> parse(const std::vector<token>& tokens);

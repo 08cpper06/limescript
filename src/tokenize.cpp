@@ -104,6 +104,51 @@ std::optional<token> lexer::try_parse_sign(context& con) {
 	con.point.col += len;
 	return tok;
 }
+std::optional<token> lexer::try_parse_keyword(context& con) {
+	struct keyword_info {
+		std::string str;
+		token_type type;
+	};
+	static keyword_info keywords[] = {
+		{ .str = "return", .type = token_type::_return }
+	};
+
+	auto start_with = [](char* p, const char* keyword) {
+		while (*keyword) {
+			if (*p++ != *keyword++) {
+				return false;
+			}
+		}
+		return true;
+		};
+
+	int len = 0;
+	int cand_index = 0;
+	for (int index = 0; index < sizeof(keywords) / sizeof(*keywords); ++index) {
+		if (!start_with(con.p, keywords[index].str.c_str())) {
+			continue;
+		}
+		if (keywords[index].str.size() > len) {
+			len = keywords[index].str.size();
+			cand_index = index;
+		}
+	}
+	if (!len) {
+		return std::nullopt;
+	}
+	con.p += len;
+	if (std::isalnum(*con.p) || *con.p == '_') {
+		con.p -= len;
+		return std::nullopt;
+	}
+	token tok = {
+		.str = keywords[cand_index].str,
+		.type = keywords[cand_index].type,
+		.point = con.point
+	};
+	con.point.col += len;
+	return tok;
+}
 
 std::vector<token> lexer::tokenize(const std::string& source) {
 	context con { .point = {}, .p = const_cast<char*>(source.data()) };
@@ -115,6 +160,9 @@ std::vector<token> lexer::tokenize(const std::string& source) {
 			tokens.push_back(tok.value());
 		}
 		if (std::optional<token> tok = try_parse_sign(con)) {
+			tokens.push_back(tok.value());
+		}
+		if (std::optional<token> tok = try_parse_keyword(con)) {
 			tokens.push_back(tok.value());
 		}
 	}
