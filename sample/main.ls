@@ -1,2 +1,2 @@
-return (100.3 + 2) * 3;
-1 + 200;
+const test: int;
+return 0;

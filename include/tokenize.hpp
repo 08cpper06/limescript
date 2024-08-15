@@ -15,8 +15,15 @@ enum class token_type {
 	number,
 	floating,
 	sign,
+	identifier,
 
 	_return,
+
+	_const,
+	_mut,
+
+	_int,
+	_float,
 
 	eof,
 };
@@ -39,6 +46,7 @@ private:
 	static std::optional<token> try_parse_number(context& con);
 	static std::optional<token> try_parse_sign(context& con);
 	static std::optional<token> try_parse_keyword(context& con);
+	static std::optional<token> try_parse_identifier(context& con);
 
 public:
 	static std::vector<token> tokenize(const std::string& sourcce);

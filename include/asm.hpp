@@ -3,15 +3,31 @@
 #include <memory>
 #include <variant>
 #include <string>
+#include <map>
 #include "types.hpp"
 
+
+struct invalid_type {};
+#define OBJECT std::variant<invalid_type, int, double>
+
+static inline constexpr int INVALID_TYPE_INDEX = OBJECT(invalid_type()).index();
+static inline constexpr int INT_TYPE_INDEX = OBJECT(0).index();
+static inline constexpr int DOUBLE_TYPE_INDEX = OBJECT(0.).index();
 
 class instruct;
 class operand;
 
+struct variable {
+	std::string name;
+	bool is_mutable;
+	OBJECT value;
+};
+
 struct asm_context {
 	std::list<operand> stack;
 	bool is_abort { false };
+
+	std::map<std::string, variable> variables;
 
 	std::list<std::unique_ptr<instruct>> codes;
 };
@@ -26,13 +42,6 @@ public:
 enum class operand_type {
 	immidiate,
 };
-
-struct invalid_type {};
-#define OBJECT std::variant<invalid_type, int, double>
-
-static inline constexpr int INVALID_TYPE_INDEX = OBJECT(invalid_type()).index();
-static inline constexpr int INT_TYPE_INDEX = OBJECT(0).index();
-static inline constexpr int DOUBLE_TYPE_INDEX = OBJECT(0.).index();
 
 struct operand {
 	operand_type type;
@@ -54,6 +63,18 @@ public:
 	~pop_instruct() = default;
 	void execute(asm_context& con) const override;
 	std::string log(const std::string& prefix) const override;
+};
+
+class alloc_instruct : public instruct {
+public:
+	~alloc_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+
+public:
+	bool is_mutable { false };
+	std::string name;
+	object_type type;
 };
 
 class return_instruct : public instruct {

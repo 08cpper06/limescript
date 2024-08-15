@@ -144,6 +144,46 @@ ast_base_node* ast_expr_node::static_class() const {
 	return &instance;
 }
 
+std::string ast_var_define_node::log(const std::string& prefix) const {
+	std::string type_name;
+	if (modifier.type == token_type::_mut) {
+		type_name = "mut ";
+	} else if (modifier.type == token_type::_const) {
+		type_name = "const ";
+	}
+	if (var_type.type == token_type::_int) {
+		type_name += "int";
+	} else if (var_type.type == token_type::_float) {
+		type_name += "float";
+	}
+	std::string str = prefix + "<define name=\"" + name.str +"\" type=\"" + type_name + "\">\n";
+	return str + prefix + "</define>\n";
+}
+void ast_var_define_node::encode(asm_context& con) const {
+	std::unique_ptr<alloc_instruct> instruct = std::make_unique<alloc_instruct>();
+	instruct->is_mutable = modifier.type == token_type::_mut ? true : false;
+	instruct->name = name.str;
+	if (var_type.type == token_type::_int) {
+		instruct->type = object_type::integer;
+	} else if (var_type.type == token_type::_float) {
+		instruct->type = object_type::floating;
+	}
+	con.codes.push_back(std::move(instruct));
+}
+object_type ast_var_define_node::type() const {
+	if (var_type.type == token_type::_int) {
+		return object_type::integer;
+	}
+	if (var_type.type == token_type::_float) {
+		return object_type::floating;
+	}
+	return object_type::none;
+}
+ast_base_node* ast_var_define_node::static_class() const {
+	static ast_var_define_node instance;
+	return &instance;
+}
+
 std::string ast_return_node::log(const std::string& prefix) const {
 	std::string str = prefix + "<return>\n";
 	if (expr) {
@@ -279,6 +319,11 @@ std::unique_ptr<ast_base_node> parser::try_parse_stmt(context& con) {
 	}
 	std::unique_ptr<ast_base_node> node;
 
+	node = try_parse_var_define(con);
+	if (node) {
+		return std::move(node);
+	}
+
 	node = parser::try_parse_return(con);
 	if (node) {
 		return std::move(node);
@@ -297,6 +342,39 @@ std::unique_ptr<ast_base_node> parser::try_parse_stmt(context& con) {
 	std::unique_ptr<ast_expr_node> expr = std::make_unique<ast_expr_node>();
 	expr->expr = std::move(node);
 	return std::move(expr);
+}
+std::unique_ptr<ast_base_node> parser::try_parse_var_define(context& con) {
+	if (con.itr->type != token_type::_const &&
+		con.itr->type != token_type::_mut) {
+		return nullptr;
+	}
+	token modifier = *con.itr++;
+	token name = *con.itr++;
+	if (con.itr->str != ":") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "not found colon";
+		return std::move(error);
+	}
+	++con.itr;
+
+	if (con.itr->type != token_type::_int &&
+		con.itr->type != token_type::_float) {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "invalid type";
+		return std::move(error);
+	}
+	token type = *con.itr++;
+	if (con.itr->str != ";") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "not found semicolon";
+		return std::move(error);
+	}
+	++con.itr;
+	std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
+	node->modifier = modifier;
+	node->var_type = type;
+	node->name = name;
+	return std::move(node);
 }
 std::unique_ptr<ast_base_node> parser::parse(const std::vector<token>& tokens) {
 	context con { .itr = tokens.begin() };

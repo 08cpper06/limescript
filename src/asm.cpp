@@ -24,6 +24,29 @@ std::string pop_instruct::log(const std::string& prefix) const {
 	return prefix + "pop";
 }
 
+void alloc_instruct::execute(asm_context& con) const {
+	OBJECT value;
+	if (type == object_type::integer) { value = 0; }
+	else if (type == object_type::floating) { value = 0.; }
+	con.variables.insert({
+		name,
+		variable {
+			.name = name,
+			.is_mutable = is_mutable,
+			.value = value
+		}
+	});
+}
+std::string alloc_instruct::log(const std::string& prefix) const {
+	std::string type_name;
+	if (type == object_type::integer) {
+		type_name = "int";
+	} else if (type == object_type::floating) {
+		type_name = "float";
+	}
+	return prefix + "alloc " + type_name + (is_mutable ? " const" : " mut") + " as " + name;
+}
+
 void return_instruct::execute(asm_context& con) const {
 	con.is_abort = true;
 }

@@ -76,6 +76,20 @@ public:
 	std::unique_ptr<ast_base_node> expr;
 };
 
+class ast_var_define_node : public ast_base_node {
+public:
+	~ast_var_define_node() = default;
+	std::string log(const std::string& prefix) const override;
+	void encode(asm_context& con) const override;
+	object_type type() const override;
+	ast_base_node* static_class() const override;
+
+public:
+	token modifier;
+	token var_type;
+	token name;
+};
+
 class ast_return_node : public ast_base_node {
 public:
 	~ast_return_node() = default;
@@ -113,6 +127,7 @@ private:
 	static std::unique_ptr<ast_base_node> try_parse_add_sub(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_return(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_stmt(context& con);
+	static std::unique_ptr<ast_base_node> try_parse_var_define(context& con);
 public:
 	static std::unique_ptr<ast_base_node> parse(const std::vector<token>& tokens);
 };

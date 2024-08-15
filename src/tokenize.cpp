@@ -68,8 +68,7 @@ std::optional<token> lexer::try_parse_number(context& con) {
 std::optional<token> lexer::try_parse_sign(context& con) {
 	static std::vector<std::string> sign_list = {
 		"+", "-", "*", "/",
-		"(", ")",
-		";"
+		"(", ")", ";", ":",
 	};
 
 	auto start_with = [](char* p, const char* keyword) {
@@ -110,7 +109,11 @@ std::optional<token> lexer::try_parse_keyword(context& con) {
 		token_type type;
 	};
 	static keyword_info keywords[] = {
-		{ .str = "return", .type = token_type::_return }
+		{ .str = "return", .type = token_type::_return },
+		{ .str = "const", .type = token_type::_const },
+		{ .str = "mut", .type = token_type::_mut },
+		{ .str = "int", .type = token_type::_int },
+		{ .str = "float", .type = token_type::_float }
 	};
 
 	auto start_with = [](char* p, const char* keyword) {
@@ -150,6 +153,30 @@ std::optional<token> lexer::try_parse_keyword(context& con) {
 	return tok;
 }
 
+std::optional<token> lexer::try_parse_identifier(context& con) {
+	std::string str;
+	if (!isalpha(*con.p) && *con.p != '_') {
+		return std::nullopt;
+	}
+	str += *con.p++;
+	++con.point.col;
+	while (*con.p) {
+		if (isalnum(*con.p) || *con.p == '_') {
+			str += *con.p++;
+			++con.point.col;
+		}
+		else {
+			break;
+		}
+	}
+	token tok = {
+		.str = str,
+		.type = token_type::identifier,
+		.point = con.point
+	};
+	return tok;
+}
+
 std::vector<token> lexer::tokenize(const std::string& source) {
 	context con { .point = {}, .p = const_cast<char*>(source.data()) };
 	std::vector<token> tokens;
@@ -163,6 +190,9 @@ std::vector<token> lexer::tokenize(const std::string& source) {
 			tokens.push_back(tok.value());
 		}
 		if (std::optional<token> tok = try_parse_keyword(con)) {
+			tokens.push_back(tok.value());
+		}
+		if (std::optional<token> tok = try_parse_identifier(con)) {
 			tokens.push_back(tok.value());
 		}
 	}
