@@ -1,4 +1,5 @@
 #include "asm.hpp"
+#include <iostream>
 
 
 void push_instruct::execute(asm_context& con) const {
@@ -28,6 +29,11 @@ void alloc_instruct::execute(asm_context& con) const {
 	OBJECT value;
 	if (type == object_type::integer) { value = 0; }
 	else if (type == object_type::floating) { value = 0.; }
+	if (con.variables.contains(name)) {
+		std::cout << name << "is already defined" << std::endl;
+		con.is_abort = true;
+		return;
+	}
 	con.variables.insert({
 		name,
 		variable {
@@ -45,6 +51,28 @@ std::string alloc_instruct::log(const std::string& prefix) const {
 		type_name = "float";
 	}
 	return prefix + "alloc " + type_name + (is_mutable ? " const" : " mut") + " as " + name;
+}
+
+void init_instruct::execute(asm_context& con) const {
+	operand value = con.stack.back();
+	con.stack.pop_back();
+	auto itr = con.variables.find(lhs);
+	if (itr == con.variables.end()) {
+		std::cout << "not found variable: " << lhs << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	if (itr->second.is_init) {
+		std::cout << lhs << " is already initialized" << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	itr->second.value = value.value;
+	itr->second.is_init = true;
+}
+std::string init_instruct::log(const std::string& prefix) const {
+	std::string str = prefix + "init ";
+	return str + lhs;
 }
 
 void return_instruct::execute(asm_context& con) const {

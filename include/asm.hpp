@@ -20,6 +20,7 @@ class operand;
 struct variable {
 	std::string name;
 	bool is_mutable;
+	bool is_init { false };
 	OBJECT value;
 };
 
@@ -75,6 +76,16 @@ public:
 	bool is_mutable { false };
 	std::string name;
 	object_type type;
+};
+
+class init_instruct : public instruct {
+public:
+	~init_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+
+public:
+	std::string lhs;
 };
 
 class return_instruct : public instruct {

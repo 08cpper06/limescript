@@ -157,6 +157,9 @@ std::string ast_var_define_node::log(const std::string& prefix) const {
 		type_name += "float";
 	}
 	std::string str = prefix + "<define name=\"" + name.str +"\" type=\"" + type_name + "\">\n";
+	if (initial_value) {
+		str += initial_value->log(prefix + "\t");
+	}
 	return str + prefix + "</define>\n";
 }
 void ast_var_define_node::encode(asm_context& con) const {
@@ -169,6 +172,12 @@ void ast_var_define_node::encode(asm_context& con) const {
 		instruct->type = object_type::floating;
 	}
 	con.codes.push_back(std::move(instruct));
+	if (initial_value) {
+		initial_value->encode(con);
+		std::unique_ptr<init_instruct> instruct = std::make_unique<init_instruct>();
+		instruct->lhs = name.str;
+		con.codes.push_back(std::move(instruct));
+	}
 }
 object_type ast_var_define_node::type() const {
 	if (var_type.type == token_type::_int) {
@@ -364,16 +373,32 @@ std::unique_ptr<ast_base_node> parser::try_parse_var_define(context& con) {
 		return std::move(error);
 	}
 	token type = *con.itr++;
+	if (con.itr->str != ";" &&
+		con.itr->str != "=") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "not found semicolon";
+		return std::move(error);
+	}
+	if (con.itr->str == ";") {
+		++con.itr;
+		std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
+		node->modifier = modifier;
+		node->var_type = type;
+		node->name = name;
+		return std::move(node);
+	}
+	++con.itr;
+	std::unique_ptr<ast_base_node> initial_value = try_parse_add_sub(con);
 	if (con.itr->str != ";") {
 		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
 		error->message = "not found semicolon";
 		return std::move(error);
 	}
-	++con.itr;
 	std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
 	node->modifier = modifier;
 	node->var_type = type;
 	node->name = name;
+	node->initial_value = std::move(initial_value);
 	return std::move(node);
 }
 std::unique_ptr<ast_base_node> parser::parse(const std::vector<token>& tokens) {

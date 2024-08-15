@@ -88,6 +88,7 @@ public:
 	token modifier;
 	token var_type;
 	token name;
+	std::unique_ptr<ast_base_node> initial_value;
 };
 
 class ast_return_node : public ast_base_node {
