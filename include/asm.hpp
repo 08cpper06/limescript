@@ -8,11 +8,19 @@
 
 
 struct invalid_type {};
-#define OBJECT std::variant<invalid_type, int, double>
+#define OBJECT std::variant<invalid_type, int, double, std::string>
 
 static inline constexpr int INVALID_TYPE_INDEX = OBJECT(invalid_type()).index();
 static inline constexpr int INT_TYPE_INDEX = OBJECT(0).index();
 static inline constexpr int DOUBLE_TYPE_INDEX = OBJECT(0.).index();
+static inline constexpr int STRING_TYPE_INDEX = OBJECT("").index();
+
+enum class object_type {
+	none = INVALID_TYPE_INDEX,
+	integer = INT_TYPE_INDEX,
+	floating = DOUBLE_TYPE_INDEX,
+	string = STRING_TYPE_INDEX,
+};
 
 class instruct;
 class operand;
@@ -42,6 +50,7 @@ public:
 
 enum class operand_type {
 	immidiate,
+	variable,
 };
 
 struct operand {

@@ -36,6 +36,7 @@ public:
 
 public:
 	token value;
+	object_type var_type;
 };
 
 class ast_parenthess_node : public ast_base_node {
@@ -120,6 +121,8 @@ class parser {
 private:
 	struct context {
 		std::vector<token>::const_iterator itr;
+
+		std::map<std::string, variable> variables;
 	};
 private:
 	static std::unique_ptr<ast_base_node> try_parse_parenthess(context& con);

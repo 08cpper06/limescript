@@ -6,6 +6,14 @@ void push_instruct::execute(asm_context& con) const {
 	if (value.value.index() == INVALID_TYPE_INDEX) {
 		con.codes.push_back(std::make_unique<abort_instruct>());
 	}
+	if (value.type == operand_type::variable) {
+		std::string var_name = std::get<std::string>(value.value);
+		con.stack.push_back(operand {
+			.type = operand_type::immidiate,
+			.value = con.variables.find(var_name)->second.value
+		});
+		return;
+	}
 	con.stack.push_back(value);
 }
 std::string push_instruct::log(const std::string& prefix) const {
@@ -14,6 +22,10 @@ std::string push_instruct::log(const std::string& prefix) const {
 		return prefix + "push " + std::to_string(std::get<int>(value.value));
 	case DOUBLE_TYPE_INDEX: /* double */
 		return prefix + "push " + std::to_string(std::get<double>(value.value));
+	case STRING_TYPE_INDEX:
+		if (value.type == operand_type::variable) {
+			return prefix + "push " + std::get<std::string>(value.value);
+		}
 	}
 	return prefix + "push none";
 }

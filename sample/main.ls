@@ -1,3 +1,2 @@
-const test: int = 100 * 2;
-const test: int;
-return 0;
+const test: float = 10 * 2.22;
+return test + 10;

@@ -16,6 +16,14 @@ std::string ast_value_node::log(const std::string& prefix) const {
 }
 void ast_value_node::encode(asm_context& con) const {
 	std::unique_ptr<push_instruct> inst = std::make_unique<push_instruct>();
+	if (value.type == token_type::identifier) {
+		inst->value = operand {
+			.type = operand_type::variable,
+			.value = value.str
+		};
+		con.codes.push_back(std::move(inst));
+		return;
+	}
 	OBJECT object;
 	switch (type()) {
 	case object_type::integer:
@@ -40,6 +48,9 @@ object_type ast_value_node::type() const {
 	}
 	if (value.type == token_type::floating) {
 		return object_type::floating;
+	}
+	if (value.type == token_type::identifier) {
+		return var_type;
 	}
 	return object_type::none;
 }
@@ -174,6 +185,10 @@ void ast_var_define_node::encode(asm_context& con) const {
 	con.codes.push_back(std::move(instruct));
 	if (initial_value) {
 		initial_value->encode(con);
+		if (initial_value->type() != type()) {
+			std::unique_ptr<cast_instruct> cast_inst = std::make_unique<cast_instruct>(type());
+			con.codes.push_back(std::move(cast_inst));
+		}
 		std::unique_ptr<init_instruct> instruct = std::make_unique<init_instruct>();
 		instruct->lhs = name.str;
 		con.codes.push_back(std::move(instruct));
@@ -264,8 +279,17 @@ std::unique_ptr<ast_base_node> parser::try_parse_value(context& con) {
 		return std::move(expr);
 	}
 
-	if (con.itr->type != token_type::number &&
-		con.itr->type != token_type::floating) {
+	if (con.itr->type == token_type::identifier){
+		if (!con.variables.contains(con.itr->str)) {
+			return nullptr;
+		}
+		std::unique_ptr<ast_value_node> node = std::make_unique<ast_value_node>();
+		node->value = *con.itr++;
+		auto itr = con.variables.find(node->value.str);
+		node->var_type = object_type(itr->second.value.index());
+		return std::move(node);
+	} else if (con.itr->type != token_type::number &&
+				con.itr->type != token_type::floating) {	
 		return nullptr;
 	}
 	std::unique_ptr<ast_value_node> node = std::make_unique<ast_value_node>();
@@ -373,18 +397,42 @@ std::unique_ptr<ast_base_node> parser::try_parse_var_define(context& con) {
 		return std::move(error);
 	}
 	token type = *con.itr++;
+	OBJECT dummy_value;
+	switch (type.type) {
+	case token_type::_int:
+		dummy_value = 0;
+		break;
+	case token_type::_float:
+		dummy_value = 0.;
+		break;
+	}
 	if (con.itr->str != ";" &&
 		con.itr->str != "=") {
 		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
 		error->message = "not found semicolon";
 		return std::move(error);
 	}
+
+	std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
+	node->modifier = modifier;
+	node->var_type = type;
+	node->name = name;
+	if (con.variables.contains(name.str)) {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = name.str + " is already defined";
+		return std::move(error);
+	}
+	con.variables.insert({
+		name.str, 
+		variable {
+			.name = name.str,
+			.is_mutable = (modifier.type == token_type::_mut),
+			.value = std::move(dummy_value)
+		}
+	});
+
 	if (con.itr->str == ";") {
 		++con.itr;
-		std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
-		node->modifier = modifier;
-		node->var_type = type;
-		node->name = name;
 		return std::move(node);
 	}
 	++con.itr;
@@ -394,10 +442,7 @@ std::unique_ptr<ast_base_node> parser::try_parse_var_define(context& con) {
 		error->message = "not found semicolon";
 		return std::move(error);
 	}
-	std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
-	node->modifier = modifier;
-	node->var_type = type;
-	node->name = name;
+	++con.itr;
 	node->initial_value = std::move(initial_value);
 	return std::move(node);
 }
