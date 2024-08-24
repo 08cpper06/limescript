@@ -24,6 +24,7 @@ public:
 
 public:
 	std::string message;
+	std::unique_ptr<ast_base_node> child;
 };
 
 class ast_value_node : public ast_base_node {
@@ -129,6 +130,7 @@ private:
 	static std::unique_ptr<ast_base_node> try_parse_value(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_mul_div(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_add_sub(context& con);
+	static std::unique_ptr<ast_base_node> try_parse_assign(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_return(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_stmt(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_var_define(context& con);

@@ -111,6 +111,16 @@ public:
 	std::string log(const std::string& prefix) const override;
 };
 
+class mov_instruct : public instruct {
+public:
+	~mov_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+
+public:
+	std::string lhs;
+};
+
 class add_instruct : public instruct {
 public:
 	~add_instruct() = default;
@@ -137,6 +147,16 @@ public:
 	~div_instruct() = default;
 	void execute(asm_context& con) const override;
 	std::string log(const std::string& prefix) const override;
+};
+
+class movf_instruct : public instruct {
+public:
+	~movf_instruct() = default;
+	void execute(asm_context& con) const override;
+	std::string log(const std::string& prefix) const override;
+
+public:
+	std::string lhs;
 };
 
 class addf_instruct : public instruct {

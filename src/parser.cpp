@@ -2,7 +2,12 @@
 
 
 std::string ast_error_node::log(const std::string& prefix) const {
-	return prefix + "<error>" + message + "</error>\n";
+	if (!child) {
+		return prefix + "<error>" + message + "</error>\n";
+	}
+	std::string str = prefix + "<error message=\"" + message + "\">\n";
+	str += child->log(prefix + "\t");
+	return str + prefix + "</error>\n";
 }
 void ast_error_node::encode(asm_context& con) const {}
 object_type ast_error_node::type() const { return object_type::none; }
@@ -101,6 +106,24 @@ void ast_bin_op_node::encode(asm_context& con) const {
 		if (rhs->type() != type()) {
 			con.codes.push_back(std::make_unique<cast_instruct>(type()));
 		}
+	}
+
+	if (op.str == "=") {
+		ast_value_node* node = static_cast<ast_value_node*>(lhs.get());
+		if (node->type() != rhs->type() &&
+			evaluate_type(node->type(), rhs->type()) != object_type::none) {
+			con.codes.push_back(std::make_unique<cast_instruct>(node->type()));
+		}
+		if (node->type() == object_type::integer) {
+			std::unique_ptr<mov_instruct> mov_inst = std::make_unique<mov_instruct>();
+			mov_inst->lhs = node->value.str;
+			con.codes.push_back(std::move(mov_inst));
+		} else if (node->type() == object_type::floating) {
+			std::unique_ptr<movf_instruct> mov_inst = std::make_unique<movf_instruct>();
+			mov_inst->lhs = node->value.str;
+			con.codes.push_back(std::move(mov_inst));
+		}
+		return;
 	}
 
 	if (type() == object_type::integer) {
@@ -280,17 +303,23 @@ std::unique_ptr<ast_base_node> parser::try_parse_value(context& con) {
 	}
 
 	if (con.itr->type == token_type::identifier){
-		if (!con.variables.contains(con.itr->str)) {
-			return nullptr;
-		}
 		std::unique_ptr<ast_value_node> node = std::make_unique<ast_value_node>();
 		node->value = *con.itr++;
 		auto itr = con.variables.find(node->value.str);
+		if (itr == con.variables.end()) {
+			node->var_type = object_type::none;
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "value type is not appropriate";
+			error->child = std::move(node);
+			return std::move(error);
+		}
 		node->var_type = object_type(itr->second.value.index());
 		return std::move(node);
 	} else if (con.itr->type != token_type::number &&
 				con.itr->type != token_type::floating) {	
-		return nullptr;
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "value type is not appropriate";
+		return std::move(error);
 	}
 	std::unique_ptr<ast_value_node> node = std::make_unique<ast_value_node>();
 	node->value = *con.itr++;
@@ -329,6 +358,51 @@ std::unique_ptr<ast_base_node> parser::try_parse_add_sub(context& con) {
 	}
 	return nullptr;
 }
+
+std::unique_ptr<ast_base_node> parser::try_parse_assign(context& con) {
+	std::unique_ptr<ast_base_node> lhs = parser::try_parse_add_sub(con);
+	if (!lhs) {
+		return nullptr;
+	}
+	while (lhs) {
+		if (con.itr->str == "=") {
+			std::unique_ptr<ast_bin_op_node> node = std::make_unique<ast_bin_op_node>();
+			node->op = *con.itr++;
+			node->lhs = std::move(lhs);
+			node->rhs = try_parse_add_sub(con);
+			if (evaluate_type(node->lhs->type(), node->rhs->type()) == object_type::none) {
+				/* is castable? */
+				std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+				error->message = "failed to cast " + to_string(node->rhs->type()) + " -> " + to_string(node->lhs->type());
+				error->child = std::move(node);
+				lhs = std::move(error);
+				continue;
+			} else if (node->lhs->static_class() != ast_value_node().static_class()) {
+				/* is lhs assignable? */
+				std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+				error->message = "assign operator's lhs is not a variable";
+				error->child = std::move(node);
+				lhs = std::move(error);
+				continue;
+			} else if (ast_value_node* value = static_cast<ast_value_node*>(node->lhs.get())) {
+				auto itr = con.variables.find(value->value.str);
+				if (!itr->second.is_mutable) {
+					/* is lhs mutable? */
+					std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+					error->message = "assign operator's lhs is not mutable";
+					error->child = std::move(node);
+					lhs = std::move(error);
+					continue;
+				}
+			}
+			lhs = std::move(node);
+		} else {
+			return lhs;
+		}
+	}
+	return nullptr;
+}
+
 std::unique_ptr<ast_base_node> parser::try_parse_return(context& con) {
 	if (con.itr->type != token_type::_return) {
 		return nullptr;
@@ -362,7 +436,7 @@ std::unique_ptr<ast_base_node> parser::try_parse_stmt(context& con) {
 		return std::move(node);
 	}
 
-	node = parser::try_parse_add_sub(con);
+	node = parser::try_parse_assign(con);
 	if (node && node->static_class() == ast_error_node().static_class()) {
 		return std::move(node);
 	}

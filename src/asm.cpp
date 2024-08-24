@@ -101,6 +101,30 @@ std::string abort_instruct::log(const std::string& prefix) const {
 	return prefix + "abort\n";
 }
 
+void mov_instruct::execute(asm_context& con) const {
+	operand rhs = con.stack.back(); con.stack.pop_back();
+	auto itr = con.variables.find(lhs);
+	if (itr == con.variables.end()) {
+		std::cout << "not found variable: " << lhs << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	if (!(itr->second.is_mutable)) {
+		std::cout << lhs << "is immutable" << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	if (itr->second.value.index() != rhs.value.index()) {
+		std::cout << "mov is failed (reason: defferent type)" << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	itr->second.value = rhs.value;
+}
+std::string mov_instruct::log(const std::string& prefix) const {
+	return prefix + "mov " + lhs + "\n";
+}
+
 void add_instruct::execute(asm_context& con) const {
 	operand rhs = con.stack.back(); con.stack.pop_back();
 	operand lhs = con.stack.back(); con.stack.pop_back();
@@ -155,6 +179,30 @@ void div_instruct::execute(asm_context& con) const {
 }
 std::string div_instruct::log(const std::string& prefix) const {
 	return prefix + "div\n";
+}
+
+void movf_instruct::execute(asm_context& con) const {
+	operand rhs = con.stack.back(); con.stack.pop_back();
+	auto itr = con.variables.find(lhs);
+	if (itr == con.variables.end()) {
+		std::cout << "not found variable: " << lhs << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	if (!(itr->second.is_mutable)) {
+		std::cout << lhs << "is immutable" << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	if (itr->second.value.index() != rhs.value.index()) {
+		std::cout << "mov is failed (reason: defferent type)" << std::endl;
+		con.is_abort = true;
+		return;
+	}
+	itr->second.value = rhs.value;
+}
+std::string movf_instruct::log(const std::string& prefix) const {
+	return prefix + "movf " + lhs + "\n";
 }
 
 void addf_instruct::execute(asm_context& con) const {
