@@ -85,7 +85,7 @@ ast_base_node* ast_parenthess_node::static_class() const {
 }
 
 std::string ast_bin_op_node::log(const std::string& prefix) const {
-	std::string str = prefix + "<operator op=\"" + op.str + ">\n";
+	std::string str = prefix + "<operator op=\"" + op.str + "\">\n";
 	if (lhs) {
 		str += lhs->log(prefix + "\t");
 	}
@@ -525,12 +525,20 @@ std::unique_ptr<ast_base_node> parser::parse(const std::vector<token>& tokens) {
 
 	std::unique_ptr<ast_block_node> block = std::make_unique<ast_block_node>();
 	block->block_name = "global";
+	std::vector<token>::const_iterator itr;
 	while (con.itr->type != token_type::eof) {
+		itr = con.itr;
 		std::unique_ptr<ast_base_node> node = try_parse_stmt(con);
 		if (!node) {
 			break;
 		}
 		block->nodes.push_back(std::move(node));
+		if (itr == con.itr) {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "failed to parse.";
+			error->child = std::move(block);
+			return std::move(error);
+		}
 	}
 
 	return std::move(block);
