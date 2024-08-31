@@ -1,0 +1,18 @@
+<block name="global">
+	<define name="test" type="mut float">
+		<value>10</value>
+	</define>
+	<operator op="=">
+		<value>test</value>
+		<operator op="+">
+			<value>200</value>
+			<value>20.22</value>
+		</operator>
+	</operator>
+	<return>
+		<operator op="+">
+			<value>test</value>
+			<value>10</value>
+		</operator>
+	</return>
+</block>

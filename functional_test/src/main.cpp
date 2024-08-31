@@ -1,0 +1,7 @@
+#include "functional_test_manager.hpp"
+
+
+int main() {
+	functional_test_manager::get_instance()->execute(10000);
+	return 0;
+}

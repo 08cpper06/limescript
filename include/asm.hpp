@@ -23,7 +23,7 @@ enum class object_type {
 };
 
 class instruct;
-class operand;
+struct operand;
 
 struct variable {
 	std::string name;
