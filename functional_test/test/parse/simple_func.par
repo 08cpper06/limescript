@@ -1,0 +1,10 @@
+<block name="global">
+	<function name="fn@main()">
+		<return type="const int"></return>
+		<block name="implement">
+		</block>
+		<error>
+			<error>expected variable</error>
+		</error>
+	</function>
+</block>

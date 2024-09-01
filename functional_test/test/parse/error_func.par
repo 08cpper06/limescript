@@ -1,0 +1,14 @@
+<block name="global">
+	<function name="fn@main(const int)">
+		<return type="const int"></return>
+		<argument name="argc" type="const int"></argument>
+		<block name="implement">
+			<return>
+				<value>0</value>
+			</return>
+		</block>
+		<error>
+			<error>expected variable</error>
+		</error>
+	</function>
+</block>

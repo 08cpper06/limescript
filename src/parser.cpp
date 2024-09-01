@@ -272,6 +272,94 @@ ast_base_node* ast_block_node::static_class() const {
 	return &instance;
 }
 
+std::string ast_function_node::log(const std::string& prefix) const {
+	std::string ret = prefix + "<function name=\"" + get_mangling_name() + "\">\n";
+	ret += prefix + "\t<return type=\"";
+	ret += std::visit(token_node_str_visit {}, return_type.modifier);
+	ret += " ";
+	ret += std::visit(token_node_str_visit {}, return_type.var_type);
+	ret += "\"></return>\n";
+
+	for (const std::unique_ptr<ast_base_node>& ptr : arguments) {
+		if (ptr->static_class() == ast_var_define_node().static_class()) {
+			ast_var_define_node* node = static_cast<ast_var_define_node*>(ptr.get());
+			std::string type_name;
+			if (node->modifier.type == token_type::_mut) {
+				type_name = "mut ";
+			} else if (node->modifier.type == token_type::_const) {
+				type_name = "const ";
+			}
+			if (node->var_type.type == token_type::_int) {
+				type_name += "int";
+			} else if (node->var_type.type == token_type::_float) {
+				type_name += "float";
+			}
+			ret += prefix + "\t<argument name=\"" + node->name.str + "\" ";
+			ret += "type=\"" + type_name +"\"></argument>\n";
+		} else {
+			ret += ptr->log(prefix + "\t");
+		}
+		
+	}
+	
+	if (block) {
+		if (ast_block_node* casted_block = dynamic_cast<ast_block_node*>(block.get())) {
+			casted_block->block_name = "implement";
+			ret += block->log(prefix + "\t");
+			casted_block->block_name = get_mangling_name();
+		}
+	}
+	if (!error_list.empty()) {
+		ret += prefix + "\t<error>\n";
+		for (const std::unique_ptr<ast_base_node>& ptr : error_list) {
+			ret += ptr->log(prefix + "\t\t");
+		}
+		ret += prefix + "\t</error>\n";
+	}
+	ret += prefix + "</function>\n";
+	return ret;
+}
+void ast_function_node::encode(asm_context& con) const {
+	asm_context::function_info info;
+	{
+		asm_context dmy_con;
+		block->encode(dmy_con);
+		info.instruction = std::move(dmy_con.codes);
+	}
+	for (const std::unique_ptr<ast_base_node>& ptr : arguments) {
+		if (ptr->static_class() == ast_var_define_node().static_class()) {
+			ast_var_define_node* node = static_cast<ast_var_define_node*>(ptr.get());
+			variable var;
+			var.is_init = node->initial_value ? true : false;
+			var.is_mutable = node->modifier.type == token_type::_mut;
+			var.name = node->name.str;
+			info.argument.push_back(std::move(var));
+		}
+	}
+
+	con.functions.insert({get_mangling_name(), std::move(info)});
+}
+object_type ast_function_node::type() const {
+	return object_type::none;
+}
+ast_base_node* ast_function_node::static_class() const {
+	static ast_block_node instance;
+	return &instance;
+}
+std::string ast_function_node::get_mangling_name() const {
+	std::string mangled_name = "fn@" + std::visit(token_node_str_visit {}, name) + "(";
+	std::string sep = "";
+	
+	for (const std::unique_ptr<ast_base_node>& ptr : arguments) {
+		if (ptr->static_class() == ast_var_define_node().static_class()) {
+			ast_var_define_node* node = static_cast<ast_var_define_node*>(ptr.get());
+			mangled_name += std::exchange(sep, ",");
+			mangled_name += node->modifier.str + " " + node->var_type.str;
+		}
+	}
+	return mangled_name + ")";
+}
+
 std::unique_ptr<ast_base_node> parser::try_parse_parenthess(context& con) {
 	if (con.itr->str != "(") {
 		return nullptr;
@@ -428,6 +516,18 @@ std::unique_ptr<ast_base_node> parser::try_parse_stmt(context& con) {
 
 	node = try_parse_var_define(con);
 	if (node) {
+		if (con.itr->str != ";") {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "not found semicolon";
+			error->child = std::move(node);
+			return std::move(error);
+		}
+		++con.itr;
+		return std::move(node);
+	}
+
+	node = try_parse_function_define(con);
+	if (node) {
 		return std::move(node);
 	}
 
@@ -479,12 +579,7 @@ std::unique_ptr<ast_base_node> parser::try_parse_var_define(context& con) {
 	case token_type::_float:
 		dummy_value = 0.;
 		break;
-	}
-	if (con.itr->str != ";" &&
-		con.itr->str != "=") {
-		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
-		error->message = "not found semicolon";
-		return std::move(error);
+	default: break;
 	}
 
 	std::unique_ptr<ast_var_define_node> node = std::make_unique<ast_var_define_node>();
@@ -505,21 +600,127 @@ std::unique_ptr<ast_base_node> parser::try_parse_var_define(context& con) {
 		}
 	});
 
-	if (con.itr->str == ";") {
-		++con.itr;
+	if (con.itr->str != "=") {
 		return std::move(node);
 	}
 	++con.itr;
 	std::unique_ptr<ast_base_node> initial_value = try_parse_add_sub(con);
-	if (con.itr->str != ";") {
-		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
-		error->message = "not found semicolon";
-		return std::move(error);
-	}
-	++con.itr;
 	node->initial_value = std::move(initial_value);
 	return std::move(node);
 }
+std::unique_ptr<ast_base_node> parser::try_parse_function_define(context& con) {
+	if (con.itr->type != token_type::_fn) {
+		return nullptr;
+	}
+	++con.itr;
+	std::unique_ptr<ast_function_node> function = std::make_unique<ast_function_node>();
+
+	if (con.itr->type != token_type::identifier) {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "expected identifer: " + con.itr->str;
+		function->name = std::move(error);
+	} else {
+		function->name = *con.itr;
+	}
+	++con.itr;
+
+	if (con.itr->str != "(") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "expected `(`: " + con.itr->str;
+		return std::move(error);
+	}
+	++con.itr;
+	for (;;) {
+		std::unique_ptr<ast_base_node> node = try_parse_var_define(con);
+		if (!node) {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "expected variable";
+			function->error_list.push_back(std::move(error));
+		} else {
+			function->arguments.push_back(std::move(node));
+		}
+		if (con.itr->type == token_type::eof) {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "expected `)`";
+			return std::move(error);
+		}
+		if (con.itr->str == ")") {
+			break;
+		}
+
+		if (con.itr->str == ",") {
+			++con.itr;
+			continue;
+		} else {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "expected comma";
+			function->error_list.push_back(std::move(error));
+			if (con.itr->type != token_type::_const &&
+				con.itr->type != token_type::_mut) {
+				++con.itr;
+			}
+		}
+	}
+	++con.itr;
+
+	if (con.itr->str != "->") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "expected `->`";
+		error->child = std::move(function);
+		return std::move(error);
+	}
+	++con.itr;
+
+	if (con.itr->type != token_type::_const &&
+		con.itr->type != token_type::_mut) {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "expected `const` or `mut`";
+		function->return_type.modifier = std::move(error);
+	} else {
+		function->return_type.modifier = *con.itr;
+	}
+	++con.itr;
+
+	if (con.itr->type != token_type::_int &&
+		con.itr->type != token_type::_float) {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "expected `int` or `float`";
+		function->return_type.var_type = std::move(error);
+	} else {
+		function->return_type.var_type = *con.itr;
+	}
+	++con.itr;
+
+	if (con.itr->str != "{") {
+		std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+		error->message = "expected `{`";
+		function->block = std::move(error);
+		return std::move(function);
+	}
+	++con.itr;
+	std::unique_ptr<ast_block_node> block = std::make_unique<ast_block_node>();
+	block->block_name = function->get_mangling_name();
+	while (con.itr->str != "}") {
+		std::unique_ptr<ast_base_node> node = try_parse_stmt(con);
+		if (!node) {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "invalid expression";
+			block->nodes.push_back(std::move(error));
+		} else {
+			block->nodes.push_back(std::move(node));
+		}
+		if (con.itr->type == token_type::eof) {
+			std::unique_ptr<ast_error_node> error = std::make_unique<ast_error_node>();
+			error->message = "invalid expression";
+			error->child = std::move(function);
+			return std::move(error);
+		}
+	}
+	++con.itr;
+	function->block = std::move(block);
+	return std::move(function);
+}
+
 std::unique_ptr<ast_base_node> parser::parse(const std::vector<token>& tokens) {
 	context con { .itr = tokens.begin() };
 

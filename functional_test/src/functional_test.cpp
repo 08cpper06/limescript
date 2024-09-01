@@ -6,42 +6,41 @@
 #include <fstream>
 
 
+struct build_test_parameter {
+	std::string source;
+	std::string result;
+};
+
 IMPLEMENT_FUNCTIONAL_TEST(build_ast)
 void build_ast_test::get_tests(std::vector<test_parameter>& parameters) const {
 	namespace fs = std::filesystem;
 	std::string path = "../../functional_test/test";
 	for (const fs::directory_entry& entry : fs::directory_iterator(path + "/source")) {
-		std::string param;
-		param = entry.path().string() + ";";
-		param += path + "/parse/" + entry.path().filename().replace_extension("par").string();
+		std::string src_file = entry.path().string();
+		std::ifstream src_in(src_file);
+		std::string source((std::istreambuf_iterator<char>(src_in)), (std::istreambuf_iterator<char>()));
+		source.push_back('\0');
+
+		std::string res_file = path + "/parse/" + entry.path().filename().replace_extension("par").string();
+		std::ifstream res_in(res_file);
+		std::string result((std::istreambuf_iterator<char>(res_in)), (std::istreambuf_iterator<char>()));
+
 		parameters.push_back(test_parameter {
 			.test_name = entry.path().filename().string(),
-			.object = std::make_unique<std::string>(param.c_str())
+			.object = std::make_unique<build_test_parameter>(build_test_parameter { .source = source, .result = result})
 		});
 	}
 }
 bool build_ast_test::run_test(const std::unique_ptr<void>& parameter) const {
-	std::string* param = static_cast<std::string*>(parameter.get());
-	size_t pos = param->find(";");
-	std::string src_file = param->substr(0, pos);
-	std::string res_file = param->substr(pos + 1);
+	build_test_parameter* param = static_cast<build_test_parameter*>(parameter.get());
 
-	std::ifstream in(src_file);
-	std::string text((std::istreambuf_iterator<char>(in)), (std::istreambuf_iterator<char>()));
-	text.push_back('\0');
-
-	std::vector<token> tokens = lexer::tokenize(std::move(text));
+	std::vector<token> tokens = lexer::tokenize(std::move(param->source));
 	std::unique_ptr<ast_base_node> root = parser::parse(std::move(tokens));
 	if (!root) {
 		return false;
 	}
-	in = std::ifstream(res_file);
-	if (in.fail()) {
-		return false;
-	}
-	text = std::string((std::istreambuf_iterator<char>(in)), (std::istreambuf_iterator<char>()));
 	std::string test_str = root->log("");
-	if (text != test_str) {
+	if (param->result != test_str) {
 		return false;
 	}
 

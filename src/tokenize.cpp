@@ -68,8 +68,8 @@ std::optional<token> lexer::try_parse_number(context& con) {
 std::optional<token> lexer::try_parse_sign(context& con) {
 	static std::vector<std::string> sign_list = {
 		"+", "-", "*", "/",
-		"(", ")", ";", ":",
-		"="
+		"(", ")", ";", ":", "=",
+		",", "->", "{", "}"
 	};
 
 	auto start_with = [](char* p, const char* keyword) {
@@ -114,7 +114,8 @@ std::optional<token> lexer::try_parse_keyword(context& con) {
 		{ .str = "const", .type = token_type::_const },
 		{ .str = "mut", .type = token_type::_mut },
 		{ .str = "int", .type = token_type::_int },
-		{ .str = "float", .type = token_type::_float }
+		{ .str = "float", .type = token_type::_float },
+		{ .str = "fn", .type = token_type::_fn }
 	};
 
 	auto start_with = [](char* p, const char* keyword) {

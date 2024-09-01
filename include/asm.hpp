@@ -33,12 +33,21 @@ struct variable {
 };
 
 struct asm_context {
+public:
+	struct function_info {
+		std::list<variable> argument;
+		std::list<std::unique_ptr<instruct>> instruction;
+	};
+	
+public:
 	std::list<operand> stack;
 	bool is_abort { false };
 
 	std::map<std::string, variable> variables;
 
 	std::list<std::unique_ptr<instruct>> codes;
+
+	std::map<std::string, function_info> functions;
 };
 
 class instruct {

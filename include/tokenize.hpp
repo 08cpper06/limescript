@@ -18,6 +18,7 @@ enum class token_type {
 	identifier,
 
 	_return,
+	_fn,
 
 	_const,
 	_mut,

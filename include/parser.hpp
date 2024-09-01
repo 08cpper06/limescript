@@ -118,6 +118,33 @@ public:
 	std::string block_name;
 };
 
+class ast_function_node : public ast_base_node {
+public:
+	using token_node = std::variant<token, std::unique_ptr<ast_error_node>>;
+	struct token_node_str_visit {
+		std::string operator()(const token& tok) { return tok.str; }
+		std::string operator()(const auto&) { return "error"; }
+	};
+public:
+	~ast_function_node() = default;
+	std::string log(const std::string& prefix) const override;
+	void encode(asm_context& con) const override;
+	object_type type() const override;
+	ast_base_node* static_class() const override;
+
+	std::string get_mangling_name() const;
+
+public:
+	std::unique_ptr<ast_base_node> block;
+	token_node name;
+	struct {
+		token_node modifier;
+		token_node var_type;
+	} return_type;
+	std::vector<std::unique_ptr<ast_base_node>> arguments;
+	std::vector<std::unique_ptr<ast_base_node>> error_list;
+};
+
 class parser {
 private:
 	struct context {
@@ -134,6 +161,7 @@ private:
 	static std::unique_ptr<ast_base_node> try_parse_return(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_stmt(context& con);
 	static std::unique_ptr<ast_base_node> try_parse_var_define(context& con);
+	static std::unique_ptr<ast_base_node> try_parse_function_define(context& con);
 public:
 	static std::unique_ptr<ast_base_node> parse(const std::vector<token>& tokens);
 };

@@ -273,6 +273,7 @@ void cast_instruct::execute(asm_context& con) const {
 			case object_type::none: return invalid_type();
 			case object_type::integer: return value;
 			case object_type::floating: return static_cast<double>(value);
+			default: break;
 			}
 			return invalid_type();
 		}
@@ -281,6 +282,7 @@ void cast_instruct::execute(asm_context& con) const {
 			case object_type::none: return invalid_type();
 			case object_type::integer: return static_cast<int>(value);
 			case object_type::floating: return value;
+			default: break;
 			}
 			return invalid_type();
 		}
@@ -304,6 +306,9 @@ std::string cast_instruct::log(const std::string& prefix) const {
 		break;
 	case object_type::floating:
 		str += "double\n";
+		break;
+	default:
+		str += "unknown\n";
 		break;
 	}
 	return str;
